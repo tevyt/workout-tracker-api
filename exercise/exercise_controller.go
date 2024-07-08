@@ -28,7 +28,7 @@ func (exerciseController *ExerciseController) CreateExercise(ginContext *gin.Con
 
 	if err != nil {
 		fmt.Printf("Error reading request json - %v\n", err)
-		ginContext.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to read request", "error": err.Error()})
+		ginContext.JSON(http.StatusBadRequest, gin.H{"message": "Unable to read request", "error": err.Error()})
 		return
 
 	}
