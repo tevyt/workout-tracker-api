@@ -7,6 +7,7 @@ import (
 type ExerciseRepository interface {
 	CreateExercise(name string, increment int8) (Exercise, error)
 	GetExercise(id int64) (Exercise, error)
+	SearchExercises(query string) ([]Exercise, error)
 }
 
 type ExerciseRepositoryImpl struct {
@@ -46,4 +47,18 @@ func (exerciseRepository *ExerciseRepositoryImpl) GetExercise(id int64) (Exercis
 	err := exerciseRepository.databaseConnection.Get(&exercise, getExerciseQuery, id)
 
 	return exercise, err
+}
+
+func (exerciseRepository *ExerciseRepositoryImpl) SearchExercises(query string) ([]Exercise, error) {
+	searchExerciseQuery := "SELECT id, exercise_name, increment FROM exercise WHERE exercise_name ILIKE $1"
+
+	var results []Exercise
+
+	err := exerciseRepository.databaseConnection.Select(&results, searchExerciseQuery, "%"+query+"%")
+
+	if err == nil && results == nil {
+		return make([]Exercise, 0), nil
+	}
+
+	return results, err
 }

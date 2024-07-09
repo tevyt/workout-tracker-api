@@ -34,6 +34,16 @@ func (exerciseRepository *ExerciseRepositoryMock) GetExercise(id int64) (Exercis
 
 	return Exercise{}, sql.ErrNoRows
 }
+
+func (exerciseRepository *ExerciseRepositoryMock) SearchExercises(query string) ([]Exercise, error) {
+	if exerciseRepository.induceError {
+		return []Exercise{}, errors.New("Error")
+	}
+	if query == "Deadlift" {
+		return []Exercise{{Id: 1, ExerciseName: "Deadlift", Increment: 10}}, nil
+	}
+	return make([]Exercise, 0), nil
+}
 func TestServiceCreateExercise(t *testing.T) {
 	exerciseService := NewExerciseService(&ExerciseRepositoryMock{})
 
@@ -106,4 +116,29 @@ func TestGetExerciseReturnsErrorWhenASystemErrorOccurs(t *testing.T) {
 	if isExerciseNotFoundError {
 		t.Error("expected error to be propogated, wrapped error was returned.")
 	}
+}
+
+func TestSearchExercisesReturnsAListOfExercises(t *testing.T) {
+	exerciseService := NewExerciseService(&ExerciseRepositoryMock{induceError: false})
+
+	exercises, err := exerciseService.SearchExercises("Deadlift")
+
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+
+	if len(exercises) == 0 {
+		t.Error("Array should not be empty.")
+	}
+}
+
+func TestSearchExerciseReturnsAnErrorIfTheRepositoryErrors(t *testing.T) {
+	exerciseService := NewExerciseService(&ExerciseRepositoryMock{induceError: true})
+
+	_, err := exerciseService.SearchExercises("Deadlift")
+
+	if err == nil {
+		t.Error("Error should have been propogated")
+	}
+
 }

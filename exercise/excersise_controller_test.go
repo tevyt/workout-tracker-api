@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,16 @@ func (exerciseService *ExerciseServiceMock) GetExercise(id int64) (Exercise, err
 		return Exercise{Id: 1, ExerciseName: "Deadlift", Increment: 10}, nil
 	}
 	return Exercise{}, ExerciseNotFoundError{Id: id}
+}
+
+func (exerciseService *ExerciseServiceMock) SearchExercises(query string) ([]Exercise, error) {
+	if exerciseService.induceError {
+		return make([]Exercise, 0), errors.New("Error")
+	}
+	if query == "Deadlift" {
+		return []Exercise{{Id: 1, ExerciseName: "Deadlift", Increment: 10}}, nil
+	}
+	return make([]Exercise, 0), nil
 }
 
 func TestCreateExerciseReturns201WhenSuccessful(t *testing.T) {
@@ -105,6 +116,47 @@ func TestGetServiceReturns500WhenThereIsASystemError(t *testing.T) {
 
 	if context.Writer.Status() != http.StatusInternalServerError {
 		t.Errorf("Expected status to be %d was %d", http.StatusInternalServerError, context.Writer.Status())
+	}
+}
+
+func TestSearchExercisesReturns200OnSuccess(t *testing.T) {
+	context := createGinContext("", "GET")
+
+	url, err := url.Parse("?name=Deadlift")
+
+	if err != nil {
+		t.Error("Could not parse test url")
+	}
+
+	context.Request.URL = url
+
+	exerciseController := NewExerciseController(&ExerciseServiceMock{induceError: false})
+
+	exerciseController.SearchExercises(context)
+
+	if context.Writer.Status() != http.StatusOK {
+		t.Errorf("Expected %d, got %d\n", http.StatusOK, context.Writer.Status())
+	}
+}
+
+func TestSearchExercisesReturns500IfThereIsAnError(t *testing.T) {
+
+	context := createGinContext("", "GET")
+
+	url, err := url.Parse("?name=Deadlift")
+
+	if err != nil {
+		t.Error("Could not parse test url")
+	}
+
+	context.Request.URL = url
+
+	exerciseController := NewExerciseController(&ExerciseServiceMock{induceError: true})
+
+	exerciseController.SearchExercises(context)
+
+	if context.Writer.Status() != http.StatusInternalServerError {
+		t.Errorf("Expected %d, got %d\n", http.StatusInternalServerError, context.Writer.Status())
 	}
 }
 

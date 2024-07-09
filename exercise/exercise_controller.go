@@ -65,3 +65,15 @@ func (exerciseController *ExerciseController) GetExercise(ginContext *gin.Contex
 
 	ginContext.JSON(200, exercise)
 }
+
+func (exerciseController *ExerciseController) SearchExercises(ginContext *gin.Context) {
+	query := ginContext.Query("name")
+
+	results, err := exerciseController.service.SearchExercises(query)
+
+	if err != nil {
+		ginContext.JSON(http.StatusInternalServerError, gin.H{"message": "Error getting exercises", "error": err.Error()})
+	}
+
+	ginContext.JSON(http.StatusOK, results)
+}
