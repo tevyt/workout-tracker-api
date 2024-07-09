@@ -3,6 +3,7 @@ package exercise
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,11 +34,34 @@ func (exerciseController *ExerciseController) CreateExercise(ginContext *gin.Con
 
 	}
 
-	model, err := exerciseController.service.CreateExercise(createExerciseRequestBody.ExerciseName, createExerciseRequestBody.Increment)
+	exercise, err := exerciseController.service.CreateExercise(createExerciseRequestBody.ExerciseName, createExerciseRequestBody.Increment)
 	if err != nil {
 		fmt.Printf("Error creating exercise - %v\n", err)
 		ginContext.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating exercise", "error": err.Error()})
 		return
 	}
-	ginContext.JSON(http.StatusCreated, model)
+	ginContext.JSON(http.StatusCreated, exercise)
+}
+
+func (exerciseController *ExerciseController) GetExercise(ginContext *gin.Context) {
+	id, err := strconv.ParseInt(ginContext.Param("id"), 10, 64)
+
+	if err != nil {
+		ginContext.JSON(400, gin.H{"error": "Invalid id"})
+		return
+	}
+
+	exercise, err := exerciseController.service.GetExercise(id)
+
+	if err != nil {
+		_, isExerciseNotFoundError := err.(ExerciseNotFoundError)
+		if isExerciseNotFoundError {
+			ginContext.JSON(404, gin.H{"message": "id not found", "error": err.Error()})
+		} else {
+			ginContext.JSON(500, gin.H{"message": "Error fetching exercise", "error": err.Error()})
+		}
+		return
+	}
+
+	ginContext.JSON(200, exercise)
 }

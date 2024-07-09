@@ -1,42 +1,54 @@
 package exercise
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 )
 
 type ExerciseRepositoryMock struct {
-	exercises   []ExerciseModel
+	exercises   []Exercise
 	induceError bool
 }
 
-func (exerciseRepository *ExerciseRepositoryMock) CreateExercise(name string, increment int8) (ExerciseModel, error) {
+func (exerciseRepository *ExerciseRepositoryMock) CreateExercise(name string, increment int8) (Exercise, error) {
 	if exerciseRepository.induceError {
-		return ExerciseModel{}, errors.New("Error creating exercise")
+		return Exercise{}, errors.New("Error creating exercise")
 	}
 	if exerciseRepository.exercises == nil {
-		exerciseRepository.exercises = make([]ExerciseModel, 0)
+		exerciseRepository.exercises = make([]Exercise, 0)
 	}
-	model := ExerciseModel{ExerciseName: name, Increment: increment}
-	exerciseRepository.exercises = append(exerciseRepository.exercises, model)
+	exercise := Exercise{ExerciseName: name, Increment: increment}
+	exerciseRepository.exercises = append(exerciseRepository.exercises, exercise)
 
-	return model, nil
+	return exercise, nil
+}
+
+func (exerciseRepository *ExerciseRepositoryMock) GetExercise(id int64) (Exercise, error) {
+	if exerciseRepository.induceError {
+		return Exercise{}, errors.New("Error")
+	}
+	if id == 1 {
+		return Exercise{Id: 1, ExerciseName: "Deadlift", Increment: 10}, nil
+	}
+
+	return Exercise{}, sql.ErrNoRows
 }
 func TestServiceCreateExercise(t *testing.T) {
 	exerciseService := NewExerciseService(&ExerciseRepositoryMock{})
 
-	model, err := exerciseService.CreateExercise("Deadlift", 10)
+	exercise, err := exerciseService.CreateExercise("Deadlift", 10)
 
 	if err != nil {
 		t.Errorf("Unexpected error - %v\n", err)
 	}
 
-	if model.ExerciseName != "Deadlift" {
-		t.Errorf("Returned model name is \"%s\", expected \"Deadlift\"\n", model.ExerciseName)
+	if exercise.ExerciseName != "Deadlift" {
+		t.Errorf("Returned exercise name is \"%s\", expected \"Deadlift\"\n", exercise.ExerciseName)
 	}
 
-	if model.Increment != 10 {
-		t.Errorf("Returned increment is %d, expected 10", model.Increment)
+	if exercise.Increment != 10 {
+		t.Errorf("Returned increment is %d, expected 10", exercise.Increment)
 	}
 }
 
@@ -47,5 +59,51 @@ func TestServiceCreateExerciseFails(t *testing.T) {
 
 	if err == nil {
 		t.Error("Expected an error.")
+	}
+}
+
+func TestServiceGetExercise(t *testing.T) {
+	exerciseService := NewExerciseService(&ExerciseRepositoryMock{})
+
+	exercise, err := exerciseService.GetExercise(1)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %v\n", err)
+	}
+
+	if exercise.Id != 1 {
+		t.Errorf("Expected id to be 1 was %d\n", exercise.Id)
+	}
+
+	if exercise.ExerciseName != "Deadlift" {
+		t.Errorf("Expected name to be \"Deadlift\" was \"%s\"", exercise.ExerciseName)
+	}
+
+	if exercise.Increment != 10 {
+		t.Errorf("Expected increment to be 10 was %d\n", exercise.Increment)
+	}
+}
+
+func TestGetExerciseReturnsExcersiceNotFoundWhenRecordDoesNotExist(t *testing.T) {
+	exerciseService := NewExerciseService(&ExerciseRepositoryMock{})
+
+	_, err := exerciseService.GetExercise(2)
+
+	_, isExerciseNotFoundError := err.(ExerciseNotFoundError)
+
+	if !isExerciseNotFoundError {
+		t.Error("Expected ExerciseNotFoundError")
+	}
+}
+
+func TestGetExerciseReturnsErrorWhenASystemErrorOccurs(t *testing.T) {
+	exerciseService := NewExerciseService(&ExerciseRepositoryMock{induceError: true})
+
+	_, err := exerciseService.GetExercise(1)
+
+	_, isExerciseNotFoundError := err.(ExerciseNotFoundError)
+
+	if isExerciseNotFoundError {
+		t.Error("expected error to be propogated, wrapped error was returned.")
 	}
 }
