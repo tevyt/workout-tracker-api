@@ -94,3 +94,65 @@ func TestGetExerciseError(t *testing.T) {
 		t.Error("Expected an error.")
 	}
 }
+
+func TestSearchExercisesReturnsAnArrayOnSuccess(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+
+	if err != nil {
+		t.Error("Unable to create database mock")
+	}
+
+	result := sqlmock.NewRows([]string{"id", "exercise_name", "increment"}).AddRow(1, "Deadlift", 10)
+	mock.ExpectQuery("SELECT id, exercise_name, increment FROM exercise").WithArgs("%Deadlift%").WillReturnRows(result)
+
+	exerciseRepository := NewExerciseRepository(db)
+
+	exercises, err := exerciseRepository.SearchExercises("Deadlift")
+
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+
+	if len(exercises) == 0 {
+		t.Error("Expected entry to be returned")
+	}
+}
+
+func TestSearchExercisesReturnsAnEmptyArrayIfNoRowsAreReturned(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+
+	if err != nil {
+		t.Error("Unable to create database mock")
+	}
+	result := sqlmock.NewRows([]string{"id", "exercise_name", "increment"})
+	mock.ExpectQuery("SELECT id, exercise_name, increment FROM exercise").WithArgs("%Deadlift%").WillReturnRows(result)
+
+	exerciseRepository := NewExerciseRepository(db)
+
+	exercises, err := exerciseRepository.SearchExercises("Deadlift")
+
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+	if exercises == nil || len(exercises) != 0 {
+		t.Error("Expected an empty array")
+	}
+}
+
+func TestSearchExercisesPropogatesErrorsFromDB(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+
+	if err != nil {
+		t.Error("Unable to create database mock")
+	}
+	mock.ExpectQuery("SELECT id, exercise_name, increment FROM exercise").WithArgs("%Deadlift%").WillReturnError(errors.New("Error"))
+
+	exerciseRepository := NewExerciseRepository(db)
+
+	_, err = exerciseRepository.SearchExercises("Deadlift")
+
+	if err == nil {
+		t.Error("Expected an error")
+	}
+
+}

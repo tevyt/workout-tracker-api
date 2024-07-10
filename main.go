@@ -25,6 +25,7 @@ func main() {
 
 	exerciseRoutes := router.Group("/exercise")
 	exerciseRoutes.POST("/", exerciseController.CreateExercise)
+	exerciseRoutes.GET("/", exerciseController.SearchExercises)
 	exerciseRoutes.GET("/:id", exerciseController.GetExercise)
 
 	router.Run()

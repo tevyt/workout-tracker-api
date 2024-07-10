@@ -5,6 +5,7 @@ import "database/sql"
 type ExerciseService interface {
 	CreateExercise(name string, increment int8) (Exercise, error)
 	GetExercise(id int64) (Exercise, error)
+	SearchExercises(query string) ([]Exercise, error)
 }
 
 type ExerciseServiceImpl struct {
@@ -29,4 +30,8 @@ func (exerciseService *ExerciseServiceImpl) GetExercise(id int64) (Exercise, err
 	}
 
 	return exercise, err
+}
+
+func (exerciseService *ExerciseServiceImpl) SearchExercises(query string) ([]Exercise, error) {
+	return exerciseService.repository.SearchExercises(query)
 }
